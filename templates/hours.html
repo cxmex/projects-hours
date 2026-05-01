@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Hours — Projects-Hours{% endblock %}
+{% block content %}
+<div class="row mb-3">
+    <div class="col"><h1 class="h3"><i class="bi bi-stopwatch"></i> Hours Report</h1></div>
+    <div class="col-auto"><div class="card"><div class="card-body py-2"><strong>{{ total_hours }}</strong> total hours tracked</div></div></div>
+</div>
+
+<div class="row mb-3">
+    <div class="col-md-6">
+        <div class="card"><div class="card-body">
+            <h5 class="mb-3"><i class="bi bi-person"></i> By member</h5>
+            {% if not by_member %}<p class="text-muted">No data yet.</p>{% else %}
+            <table class="table table-sm">
+                <thead><tr><th>Member</th><th class="text-end">Hours</th></tr></thead>
+                <tbody>
+                {% for name, hrs in by_member %}
+                <tr><td>{{ name }}</td><td class="text-end fw-bold">{{ '%.2f'|format(hrs) }}</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            {% endif %}
+        </div></div>
+    </div>
+    <div class="col-md-6">
+        <div class="card"><div class="card-body">
+            <h5 class="mb-3"><i class="bi bi-folder"></i> By project</h5>
+            {% if not by_project %}<p class="text-muted">No data yet.</p>{% else %}
+            <table class="table table-sm">
+                <thead><tr><th>Project</th><th class="text-end">Hours</th></tr></thead>
+                <tbody>
+                {% for name, hrs in by_project %}
+                <tr><td>{{ name }}</td><td class="text-end fw-bold">{{ '%.2f'|format(hrs) }}</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            {% endif %}
+        </div></div>
+    </div>
+</div>
+
+<div class="card"><div class="card-body">
+    <h5 class="mb-3"><i class="bi bi-clock-history"></i> Recent sessions</h5>
+    {% if not recent %}
+    <p class="text-muted">No sessions yet.</p>
+    {% else %}
+    <div class="table-responsive">
+    <table class="table table-sm">
+        <thead><tr>
+            <th>Member</th><th>Project</th><th>Task</th>
+            <th>Clock in</th><th>Clock out</th>
+            <th class="text-end">Duration</th>
+        </tr></thead>
+        <tbody>
+            {% for r in recent %}
+            <tr>
+                <td>
+                    {% if r.ph_team_members %}
+                    <span class="avatar" style="background:{{ r.ph_team_members.avatar_color }};width:22px;height:22px;font-size:0.7rem">{{ r.ph_team_members.name[0] }}</span>
+                    {{ r.ph_team_members.name }}
+                    {% endif %}
+                </td>
+                <td>{% if r.ph_projects %}<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:{{ r.ph_projects.color }}"></span> {{ r.ph_projects.name }}{% endif %}</td>
+                <td>{% if r.ph_tasks %}<small>{{ r.ph_tasks.title }}</small>{% endif %}</td>
+                <td><small>{{ r.clock_in[:16].replace('T',' ') }}</small></td>
+                <td>
+                    {% if r.clock_out %}<small>{{ r.clock_out[:16].replace('T',' ') }}</small>
+                    {% else %}<span class="badge bg-success"><span class="clock-pulse"></span>active</span>{% endif %}
+                </td>
+                <td class="text-end">
+                    {% if r.duration_minutes is not none %}<strong>{{ '%.2f'|format(r.duration_minutes/60) }} h</strong>{% else %}—{% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    </div>
+    {% endif %}
+</div></div>
+{% endblock %}

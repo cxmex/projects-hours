@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Projects-Hours{% endblock %}
+{% block content %}
+<div class="row mb-4">
+    <div class="col">
+        <h1 class="h3"><i class="bi bi-kanban"></i> All Projects</h1>
+        <p class="text-muted mb-0">{{ projects|length }} projects.
+            {% if open_clocks %} <span class="clock-pulse"></span><strong>{{ open_clocks|length }}</strong> team member{{ 's' if open_clocks|length != 1 else '' }} currently clocked in.{% endif %}
+        </p>
+    </div>
+</div>
+
+{% if open_clocks %}
+<div class="card mb-4">
+    <div class="card-body">
+        <h5 class="mb-3"><span class="clock-pulse"></span> Active clocks</h5>
+        <div class="row g-3">
+            {% for c in open_clocks %}
+            <div class="col-md-4">
+                <div class="border rounded p-2">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>{{ c.ph_team_members.name if c.ph_team_members else 'Unknown' }}</strong>
+                            {% if c.ph_projects %}<br><small class="text-muted">{{ c.ph_projects.name }}</small>{% endif %}
+                        </div>
+                        <small class="text-muted">since {{ c.clock_in[:16].replace('T',' ') }}</small>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if not projects %}
+<div class="card text-center p-5">
+    <i class="bi bi-folder-plus" style="font-size: 3rem; color:#adb5bd"></i>
+    <h4 class="mt-3">No projects yet</h4>
+    <p class="text-muted">Get started by creating your first project.</p>
+    <div><a href="/projects/new" class="btn btn-primary"><i class="bi bi-plus-circle"></i> New Project</a></div>
+</div>
+{% else %}
+<div class="row g-3">
+    {% for p in projects %}
+    {% set tc = task_counts.get(p.id, {'total':0,'done':0,'in_progress':0}) %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                        <h5 class="mb-1">
+                            <span class="d-inline-block me-1" style="width:10px;height:10px;border-radius:2px;background:{{ p.color }}"></span>
+                            <a href="/projects/{{ p.id }}" class="text-decoration-none text-dark">{{ p.name }}</a>
+                        </h5>
+                        {% if p.code %}<small class="text-muted">{{ p.code }}</small>{% endif %}
+                    </div>
+                    <div class="text-end">
+                        <span class="badge badge-status-{{ p.status }}">{{ p.status.replace('_',' ') }}</span>
+                        {% if p.priority and p.priority != 'medium' %}
+                        <br><span class="badge badge-priority-{{ p.priority }} mt-1">{{ p.priority }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% if p.purpose %}
+                <p class="small text-muted mb-2"><i class="bi bi-bullseye"></i> {{ p.purpose }}</p>
+                {% endif %}
+                <div class="row text-center small mt-3">
+                    <div class="col">
+                        <div class="fw-bold">{{ tc.total }}</div>
+                        <div class="text-muted">tasks</div>
+                    </div>
+                    <div class="col">
+                        <div class="fw-bold text-warning">{{ tc.in_progress }}</div>
+                        <div class="text-muted">in prog.</div>
+                    </div>
+                    <div class="col">
+                        <div class="fw-bold text-success">{{ tc.done }}</div>
+                        <div class="text-muted">done</div>
+                    </div>
+                </div>
+                {% if p.start_date or p.target_end_date %}
+                <hr>
+                <div class="small text-muted">
+                    <i class="bi bi-calendar"></i>
+                    {{ p.start_date or '?' }} → {{ p.target_end_date or '?' }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

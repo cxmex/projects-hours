@@ -1,0 +1,302 @@
+{% extends "base.html" %}
+{% block title %}{{ project.name }} — Projects-Hours{% endblock %}
+{% block content %}
+<div class="row mb-3">
+    <div class="col">
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <span style="display:inline-block;width:14px;height:14px;border-radius:3px;background:{{ project.color }}"></span>
+            <h1 class="h3 mb-0">{{ project.name }}</h1>
+            {% if project.code %}<span class="badge bg-secondary">{{ project.code }}</span>{% endif %}
+            <span class="badge badge-status-{{ project.status }}">{{ project.status.replace('_',' ') }}</span>
+            {% if project.priority %}<span class="badge badge-priority-{{ project.priority }}">{{ project.priority }}</span>{% endif %}
+        </div>
+        <div class="text-muted small">
+            {% if project.start_date %}<i class="bi bi-calendar"></i> {{ project.start_date }} → {{ project.target_end_date or 'TBD' }}{% endif %}
+        </div>
+    </div>
+    <div class="col-auto">
+        <form method="post" action="/projects/{{ project.id }}/status" class="d-inline">
+            <select name="status" class="form-select form-select-sm d-inline-block w-auto" onchange="this.form.submit()">
+                {% for s in ['planning','active','on_hold','completed','cancelled'] %}
+                <option value="{{ s }}" {% if s == project.status %}selected{% endif %}>{{ s.replace('_',' ').title() }}</option>
+                {% endfor %}
+            </select>
+        </form>
+        <form method="post" action="/projects/{{ project.id }}/delete" class="d-inline"
+              onsubmit="return confirm('Delete this project and all its tasks/hours?');">
+            <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+        </form>
+    </div>
+</div>
+
+{% if project.purpose or project.description %}
+<div class="card mb-3">
+    <div class="card-body">
+        {% if project.purpose %}
+        <h6 class="text-muted text-uppercase small"><i class="bi bi-bullseye"></i> Purpose</h6>
+        <p>{{ project.purpose }}</p>
+        {% endif %}
+        {% if project.description %}
+        <h6 class="text-muted text-uppercase small"><i class="bi bi-file-text"></i> Description</h6>
+        <p class="mb-0">{{ project.description }}</p>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<ul class="nav nav-tabs mb-3" role="tablist">
+    <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#tab-tasks">Tasks ({{ tasks|length }})</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-milestones">Milestones ({{ milestones|length }})</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-updates">Updates ({{ updates|length }})</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-clock">Clock In/Out</a></li>
+    <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#tab-hours">Hours</a></li>
+</ul>
+
+<div class="tab-content">
+
+<!-- TASKS -->
+<div class="tab-pane fade show active" id="tab-tasks">
+<div class="row">
+    <div class="col-lg-4 mb-3">
+        <div class="card">
+            <div class="card-body">
+                <h5><i class="bi bi-plus-circle"></i> Add task</h5>
+                <form method="post" action="/projects/{{ project.id }}/tasks">
+                    <input type="text" name="title" class="form-control mb-2" placeholder="Task title" required>
+                    <textarea name="description" class="form-control mb-2" rows="2" placeholder="Description (optional)"></textarea>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <select name="status" class="form-select form-select-sm">
+                                <option value="todo">To do</option>
+                                <option value="in_progress">In progress</option>
+                                <option value="blocked">Blocked</option>
+                                <option value="review">Review</option>
+                                <option value="done">Done</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <select name="priority" class="form-select form-select-sm">
+                                <option value="low">Low</option>
+                                <option value="medium" selected>Medium</option>
+                                <option value="high">High</option>
+                                <option value="urgent">Urgent</option>
+                            </select>
+                        </div>
+                    </div>
+                    <select name="assigned_to" class="form-select form-select-sm mt-2">
+                        <option value="">— Unassigned —</option>
+                        {% for m in members %}<option value="{{ m.id }}">{{ m.name }}</option>{% endfor %}
+                    </select>
+                    <div class="row g-2 mt-1">
+                        <div class="col-6">
+                            <input type="number" step="0.25" name="estimated_hours" class="form-control form-control-sm" placeholder="Est. hours">
+                        </div>
+                        <div class="col-6">
+                            <input type="date" name="due_date" class="form-control form-control-sm">
+                        </div>
+                    </div>
+                    <button class="btn btn-primary btn-sm mt-2 w-100">Add task</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-8">
+        {% if not tasks %}
+        <div class="card p-4 text-center text-muted"><i class="bi bi-list-task" style="font-size:2rem"></i><br>No tasks yet.</div>
+        {% else %}
+        <div class="card"><div class="list-group list-group-flush">
+            {% for t in tasks %}
+            <div class="list-group-item">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div class="flex-grow-1">
+                        <div class="d-flex align-items-center gap-2">
+                            <strong>{{ t.title }}</strong>
+                            <span class="badge badge-priority-{{ t.priority }}">{{ t.priority }}</span>
+                            {% if t.due_date %}<small class="text-muted"><i class="bi bi-calendar"></i> {{ t.due_date }}</small>{% endif %}
+                            {% if t.estimated_hours %}<small class="text-muted"><i class="bi bi-stopwatch"></i> {{ t.estimated_hours }}h</small>{% endif %}
+                        </div>
+                        {% if t.description %}<div class="small text-muted mt-1">{{ t.description }}</div>{% endif %}
+                        {% if t.assignee %}
+                        <div class="small mt-1">
+                            <span class="avatar" style="background:{{ t.assignee.avatar_color }};width:20px;height:20px;font-size:0.7rem">{{ t.assignee.name[0] }}</span>
+                            {{ t.assignee.name }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="d-flex gap-2">
+                        <form method="post" action="/tasks/{{ t.id }}/status">
+                            <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+                                {% for s in ['todo','in_progress','blocked','review','done','cancelled'] %}
+                                <option value="{{ s }}" {% if s == t.status %}selected{% endif %}>{{ s.replace('_',' ') }}</option>
+                                {% endfor %}
+                            </select>
+                        </form>
+                        <form method="post" action="/tasks/{{ t.id }}/delete" onsubmit="return confirm('Delete task?');">
+                            <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div></div>
+        {% endif %}
+    </div>
+</div>
+</div>
+
+<!-- MILESTONES -->
+<div class="tab-pane fade" id="tab-milestones">
+<div class="row">
+    <div class="col-lg-4 mb-3">
+        <div class="card"><div class="card-body">
+            <h5><i class="bi bi-flag"></i> Add milestone</h5>
+            <form method="post" action="/projects/{{ project.id }}/milestones">
+                <input type="text" name="title" class="form-control mb-2" placeholder="Milestone title" required>
+                <input type="date" name="target_date" class="form-control mb-2" required>
+                <textarea name="description" class="form-control mb-2" rows="2" placeholder="Description"></textarea>
+                <button class="btn btn-primary btn-sm w-100">Add milestone</button>
+            </form>
+        </div></div>
+    </div>
+    <div class="col-lg-8">
+        {% if not milestones %}
+        <div class="card p-4 text-center text-muted"><i class="bi bi-flag" style="font-size:2rem"></i><br>No milestones yet.</div>
+        {% else %}
+        <div class="card"><div class="list-group list-group-flush">
+            {% for m in milestones %}
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+                <div>
+                    <i class="bi {{ 'bi-flag-fill text-success' if m.completed else 'bi-flag' }}"></i>
+                    <strong>{{ m.title }}</strong>
+                    <span class="text-muted small ms-2"><i class="bi bi-calendar"></i> {{ m.target_date }}</span>
+                    {% if m.description %}<div class="small text-muted">{{ m.description }}</div>{% endif %}
+                </div>
+                <form method="post" action="/milestones/{{ m.id }}/toggle">
+                    <button class="btn btn-sm {{ 'btn-outline-secondary' if m.completed else 'btn-outline-success' }}">
+                        {{ 'Mark incomplete' if m.completed else 'Mark complete' }}
+                    </button>
+                </form>
+            </div>
+            {% endfor %}
+        </div></div>
+        {% endif %}
+    </div>
+</div>
+</div>
+
+<!-- UPDATES (team comms) -->
+<div class="tab-pane fade" id="tab-updates">
+<div class="row">
+    <div class="col-lg-4 mb-3">
+        <div class="card"><div class="card-body">
+            <h5><i class="bi bi-chat-left-text"></i> Post update</h5>
+            <form method="post" action="/projects/{{ project.id }}/updates">
+                <select name="author_id" class="form-select form-select-sm mb-2">
+                    <option value="">— Anonymous —</option>
+                    {% for m in members %}<option value="{{ m.id }}">{{ m.name }}</option>{% endfor %}
+                </select>
+                <select name="kind" class="form-select form-select-sm mb-2">
+                    <option value="note">Note</option>
+                    <option value="status">Status update</option>
+                    <option value="blocker">Blocker</option>
+                    <option value="decision">Decision</option>
+                    <option value="question">Question</option>
+                </select>
+                <textarea name="body" class="form-control mb-2" rows="3" placeholder="What's on your mind?" required></textarea>
+                <button class="btn btn-primary btn-sm w-100">Post</button>
+            </form>
+        </div></div>
+    </div>
+    <div class="col-lg-8">
+        {% if not updates %}
+        <div class="card p-4 text-center text-muted"><i class="bi bi-chat-left" style="font-size:2rem"></i><br>No updates yet — start the conversation.</div>
+        {% else %}
+        {% for u in updates %}
+        <div class="card update-card kind-{{ u.kind }} mb-2"><div class="card-body py-2">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    {% if u.author %}
+                    <span class="avatar" style="background:{{ u.author.avatar_color }};width:24px;height:24px;font-size:0.75rem">{{ u.author.name[0] }}</span>
+                    <strong>{{ u.author.name }}</strong>
+                    {% else %}
+                    <strong class="text-muted">Anonymous</strong>
+                    {% endif %}
+                    <span class="badge bg-light text-dark ms-1">{{ u.kind }}</span>
+                </div>
+                <small class="text-muted">{{ u.created_at[:16].replace('T',' ') }}</small>
+            </div>
+            <div class="mt-2" style="white-space:pre-wrap">{{ u.body }}</div>
+        </div></div>
+        {% endfor %}
+        {% endif %}
+    </div>
+</div>
+</div>
+
+<!-- CLOCK -->
+<div class="tab-pane fade" id="tab-clock">
+<div class="row">
+    <div class="col-lg-6">
+        <div class="card"><div class="card-body">
+            <h5><i class="bi bi-play-circle text-success"></i> Clock in</h5>
+            <p class="text-muted small">Start a work session for a team member on this project.</p>
+            <form method="post" action="/clock-in">
+                <input type="hidden" name="project_id" value="{{ project.id }}">
+                <select name="member_id" class="form-select mb-2" required>
+                    <option value="">Select team member…</option>
+                    {% for m in members %}<option value="{{ m.id }}">{{ m.name }}</option>{% endfor %}
+                </select>
+                <select name="task_id" class="form-select mb-2">
+                    <option value="">— No specific task —</option>
+                    {% for t in tasks %}{% if t.status not in ['done','cancelled'] %}<option value="{{ t.id }}">{{ t.title }}</option>{% endif %}{% endfor %}
+                </select>
+                <textarea name="notes" class="form-control mb-2" rows="2" placeholder="What are you working on?"></textarea>
+                <button class="btn btn-success w-100"><i class="bi bi-play-fill"></i> Start clock</button>
+            </form>
+        </div></div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card"><div class="card-body">
+            <h5><i class="bi bi-stop-circle text-danger"></i> Clock out</h5>
+            <p class="text-muted small">End the active session for a team member.</p>
+            <form method="post" action="/clock-out">
+                <select name="member_id" class="form-select mb-2" required>
+                    <option value="">Select team member…</option>
+                    {% for m in members %}<option value="{{ m.id }}">{{ m.name }}</option>{% endfor %}
+                </select>
+                <textarea name="notes" class="form-control mb-2" rows="2" placeholder="Wrap-up notes (optional)"></textarea>
+                <button class="btn btn-danger w-100"><i class="bi bi-stop-fill"></i> Stop clock</button>
+            </form>
+        </div></div>
+    </div>
+</div>
+</div>
+
+<!-- HOURS -->
+<div class="tab-pane fade" id="tab-hours">
+<div class="card"><div class="card-body">
+    <h5><i class="bi bi-stopwatch"></i> Hours on this project</h5>
+    {% if not hours %}
+    <p class="text-muted">No tracked hours yet.</p>
+    {% else %}
+    <table class="table">
+        <thead><tr><th>Member</th><th class="text-end">Sessions</th><th class="text-end">Hours</th></tr></thead>
+        <tbody>
+            {% set total_h = namespace(v=0) %}
+            {% for h in hours %}
+            <tr>
+                <td>{{ h.member_name }}</td>
+                <td class="text-end">{{ h.session_count }}</td>
+                <td class="text-end fw-bold">{{ h.total_hours }}</td>
+            </tr>
+            {% set total_h.v = total_h.v + h.total_hours %}
+            {% endfor %}
+            <tr class="table-secondary"><th>Total</th><th></th><th class="text-end">{{ '%.2f'|format(total_h.v) }}</th></tr>
+        </tbody>
+    </table>
+    {% endif %}
+</div></div>
+</div>
+
+</div>
+{% endblock %}

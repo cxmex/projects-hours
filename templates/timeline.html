@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Timeline — Projects-Hours{% endblock %}
+{% block content %}
+<div class="row mb-3">
+    <div class="col">
+        <h1 class="h3"><i class="bi bi-bar-chart-steps"></i> Timeline</h1>
+        <p class="text-muted">{{ range_start }} → {{ range_end }} ({{ span_days }} days). Red line = today.</p>
+    </div>
+</div>
+
+{% if not bars %}
+<div class="card p-4 text-center text-muted"><i class="bi bi-calendar-x" style="font-size:2rem"></i>
+    <br>No projects with start dates yet. Add a start date to see them on the timeline.</div>
+{% else %}
+<div class="card"><div class="card-body p-0">
+    <div style="overflow-x:auto">
+        <div style="min-width: 800px;">
+            <!-- header (start/end labels) -->
+            <div class="d-flex justify-content-between px-2 py-1 bg-light small text-muted">
+                <span>{{ range_start }}</span>
+                <span>{{ range_end }}</span>
+            </div>
+            {% for b in bars %}
+            <div class="d-flex">
+                <div style="flex:0 0 220px;padding:8px;border-bottom:1px solid #eee;border-right:1px solid #eee">
+                    <a href="/projects/{{ b.project.id }}" class="text-decoration-none text-dark">
+                        <strong class="small">{{ b.project.name }}</strong>
+                    </a>
+                    <div class="small text-muted">
+                        <span class="badge badge-status-{{ b.project.status }}">{{ b.project.status.replace('_',' ') }}</span>
+                    </div>
+                </div>
+                <div class="timeline-row flex-grow-1">
+                    <div class="timeline-today" style="left: {{ today_offset_pct }}%"></div>
+                    <a href="/projects/{{ b.project.id }}" class="timeline-bar"
+                       style="left:{{ b.left_pct }}%; width:{{ b.width_pct }}%; background:{{ b.project.color }}; text-decoration:none"
+                       title="{{ b.project.name }} — {{ b.start }} to {{ b.end }}">
+                        {{ b.project.name }}
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div></div>
+
+{% if milestones %}
+<div class="card mt-4"><div class="card-body">
+    <h5><i class="bi bi-flag"></i> Upcoming milestones</h5>
+    <div class="list-group list-group-flush">
+        {% for m in milestones %}
+        <div class="list-group-item d-flex justify-content-between align-items-center">
+            <div>
+                <i class="bi {{ 'bi-flag-fill text-success' if m.completed else 'bi-flag' }}"></i>
+                <strong>{{ m.title }}</strong>
+                {% if m.ph_projects %}
+                <span class="ms-2" style="display:inline-block;width:8px;height:8px;border-radius:2px;background:{{ m.ph_projects.color }}"></span>
+                <small class="text-muted">{{ m.ph_projects.name }}</small>
+                {% endif %}
+            </div>
+            <small class="text-muted">{{ m.target_date }}</small>
+        </div>
+        {% endfor %}
+    </div>
+</div></div>
+{% endif %}
+{% endif %}
+{% endblock %}

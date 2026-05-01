@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Team — Projects-Hours{% endblock %}
+{% block content %}
+<div class="row mb-3">
+    <div class="col"><h1 class="h3"><i class="bi bi-people"></i> Team Members</h1></div>
+</div>
+
+<div class="row">
+<div class="col-lg-4 mb-3">
+    <div class="card"><div class="card-body">
+        <h5><i class="bi bi-person-plus"></i> Add member</h5>
+        <form method="post" action="/team">
+            <input type="text" name="name" class="form-control mb-2" placeholder="Full name" required>
+            <input type="email" name="email" class="form-control mb-2" placeholder="email@example.com">
+            <input type="text" name="role" class="form-control mb-2" placeholder="Role (e.g. Developer)">
+            <input type="number" step="0.01" name="hourly_rate" class="form-control mb-2" placeholder="Hourly rate (optional)">
+            <label class="form-label small text-muted mb-1">Avatar color</label>
+            <input type="color" name="avatar_color" value="#6c757d" class="form-control form-control-color mb-2">
+            <button class="btn btn-primary w-100">Add to team</button>
+        </form>
+    </div></div>
+</div>
+<div class="col-lg-8">
+    {% if not members %}
+    <div class="card p-4 text-center text-muted"><i class="bi bi-people" style="font-size:2rem"></i><br>No team members yet.</div>
+    {% else %}
+    <div class="card"><div class="list-group list-group-flush">
+        {% for m in members %}
+        <div class="list-group-item">
+            <div class="d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="avatar" style="background:{{ m.avatar_color }}">{{ m.name[0]|upper }}</span>
+                    <div>
+                        <strong>{{ m.name }}</strong>
+                        {% if not m.active %}<span class="badge bg-secondary">inactive</span>{% endif %}
+                        {% if m.open_clock %}<span class="badge bg-success"><span class="clock-pulse"></span>clocked in{% if m.open_clock.ph_projects %} · {{ m.open_clock.ph_projects.name }}{% endif %}</span>{% endif %}
+                        <div class="small text-muted">
+                            {% if m.role %}{{ m.role }}{% endif %}
+                            {% if m.email %} · {{ m.email }}{% endif %}
+                            {% if m.hourly_rate %} · ${{ m.hourly_rate }}/h{% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="text-end">
+                    <div class="fw-bold">{{ m.total_hours }} h</div>
+                    <small class="text-muted">total tracked</small>
+                    <form method="post" action="/team/{{ m.id }}/toggle" class="d-inline ms-2">
+                        <button class="btn btn-sm btn-outline-secondary">{{ 'Deactivate' if m.active else 'Reactivate' }}</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div></div>
+    {% endif %}
+</div>
+</div>
+{% endblock %}
