@@ -27,7 +27,7 @@
     <div class="card"><div class="list-group list-group-flush">
         {% for m in members %}
         <div class="list-group-item">
-            <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex justify-content-between align-items-start">
                 <div class="d-flex align-items-center gap-2">
                     <span class="avatar" style="background:{{ m.avatar_color }}">{{ m.name[0]|upper }}</span>
                     <div>
@@ -49,10 +49,93 @@
                     </form>
                 </div>
             </div>
+
+            {# ── Clock-in / Clock-out widget ──────────────────────────── #}
+            {% if m.active %}
+            <div class="mt-3 p-3 bg-light rounded border">
+                {% if m.open_clock %}
+                    <form method="post" action="/clock-out" class="row g-2 align-items-end">
+                        <input type="hidden" name="member_id" value="{{ m.id }}">
+                        <div class="col-12">
+                            <label class="small text-muted mb-1">
+                                ⏱ Clocked in at <strong>{{ m.open_clock.clock_in[11:16] }}</strong>
+                                {% if m.open_clock.ph_projects %}on <strong>{{ m.open_clock.ph_projects.name }}</strong>{% endif %}
+                            </label>
+                            <textarea name="notes" class="form-control" rows="2"
+                                placeholder="What did you accomplish? (will be appended to clock-in notes)"></textarea>
+                        </div>
+                        <div class="col-12">
+                            <button class="btn btn-danger w-100" type="submit">
+                                <i class="bi bi-stop-circle"></i> Clock out & save
+                            </button>
+                        </div>
+                    </form>
+                {% else %}
+                    <form method="post" action="/clock-in" class="row g-2 align-items-end">
+                        <input type="hidden" name="member_id" value="{{ m.id }}">
+                        <div class="col-md-5">
+                            <label class="small text-muted mb-1">Project</label>
+                            <select name="project_id" class="form-select form-select-sm project-select"
+                                    data-member-id="{{ m.id }}" required>
+                                <option value="">— pick a project —</option>
+                                {% for p in projects %}
+                                <option value="{{ p.id }}" style="color:{{ p.color or '#000' }}">
+                                    {% if p.code %}[{{ p.code }}] {% endif %}{{ p.name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-7">
+                            <label class="small text-muted mb-1">Optional task</label>
+                            <select name="task_id" class="form-select form-select-sm task-select"
+                                    data-member-id="{{ m.id }}">
+                                <option value="">— no specific task —</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="small text-muted mb-1">What are you about to work on?</label>
+                            <input type="text" name="notes" class="form-control"
+                                   placeholder="e.g. wireframes for landing page hero">
+                        </div>
+                        <div class="col-12">
+                            <button class="btn btn-success w-100" type="submit">
+                                <i class="bi bi-play-circle"></i> Clock in
+                            </button>
+                        </div>
+                    </form>
+                {% endif %}
+            </div>
+            {% endif %}
         </div>
         {% endfor %}
     </div></div>
     {% endif %}
 </div>
 </div>
+
+<script>
+document.querySelectorAll('.project-select').forEach(sel => {
+    sel.addEventListener('change', async (e) => {
+        const memberId = e.target.dataset.memberId;
+        const taskSel = document.querySelector(`.task-select[data-member-id="${memberId}"]`);
+        if (!taskSel) return;
+        taskSel.innerHTML = '<option value="">— no specific task —</option>';
+        const pid = e.target.value;
+        if (!pid) return;
+        try {
+            const r = await fetch(`/api/projects/${pid}/tasks`);
+            const tasks = await r.json();
+            for (const t of tasks) {
+                if (t.status === 'done' || t.status === 'cancelled') continue;
+                const opt = document.createElement('option');
+                opt.value = t.id;
+                opt.textContent = `${t.title}${t.status !== 'todo' ? ' (' + t.status + ')' : ''}`;
+                taskSel.appendChild(opt);
+            }
+        } catch (err) {
+            console.warn('task fetch failed', err);
+        }
+    });
+});
+</script>
 {% endblock %}

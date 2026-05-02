@@ -355,8 +355,17 @@ async def team_page(request: Request):
         m["open_clock"] = open_by_member.get(m["id"])
         m["total_hours"] = round(hours_by_member.get(m["id"], 0), 2)
 
+    # Active projects for the clock-in dropdown
+    projects = (sb.table("ph_projects")
+                .select("id,name,code,color")
+                .neq("status", "completed")
+                .neq("status", "cancelled")
+                .order("name")
+                .execute()).data or []
+
     return templates.TemplateResponse(request, "team.html", {
         "members": members,
+        "projects": projects,
     })
 
 
